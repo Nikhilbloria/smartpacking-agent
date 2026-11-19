@@ -1,45 +1,63 @@
+
 pipeline {
     agent any
 
     options {
-        disableConcurrentBuilds()
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
         AWS_REGION = 'ap-south-1'
-        AWS_ACCOUNT_ID = '152732246709'
+        ECR_REGISTRY = '152732246709.dkr.ecr.ap-south-1.amazonaws.com'
         ECR_REPOSITORY = 'smartpacking-agent'
         IMAGE_URI = '152732246709.dkr.ecr.ap-south-1.amazonaws.com/smartpacking-agent'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                checkout scm
-                sh 'echo "Source code checked out successfully"'
+                echo 'Source code checked out successfully'
             }
         }
 
         stage('Python Security Scan') {
-    steps {
-        sh '''
-            echo "Running Bandit security scan..."
-            docker run --rm -v "$WORKSPACE:/app" -w /app python:3.12-slim sh -c "pip install --no-cache-dir bandit pip-audit && bandit -r app.py src -ll"
-
-            echo "Running pip-audit dependency scan..."
-            docker run --rm -v "$WORKSPACE:/app" -w /app python:3.12-slim sh -c "pip install --no-cache-dir pip-audit && pip-audit -r requirements-docker.txt" || echo "WARNING: Vulnerabilities detected in dependencies. Review before production."
-        '''
-    }
-} {
             steps {
                 sh '''
+                    set +e
+
+                    echo "Running Bandit security scan..."
+
                     docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app \
-                      python:3.12-slim \
-                      sh -c "pip install --no-cache-dir bandit pip-audit && bandit -r app.py src -ll && pip-audit -r requirements-docker.txt || echo "WARNING: Dependency vulnerabilities found. Review and remediate before production."
+                        -v "$WORKSPACE:/app" \
+                        -w /app \
+                        python:3.12-slim \
+                        sh -c 'pip install --no-cache-dir bandit && bandit -r app.py src -ll'
+
+                    BANDIT_STATUS=$?
+
+                    if [ "$BANDIT_STATUS" -ne 0 ]; then
+                        echo "Bandit security scan failed."
+                        exit "$BANDIT_STATUS"
+                    fi
+
+                    echo "Running pip-audit dependency scan..."
+
+                    docker run --rm \
+                        -v "$WORKSPACE:/app" \
+                        -w /app \
+                        python:3.12-slim \
+                        sh -c 'pip install --no-cache-dir pip-audit && pip-audit -r requirements-docker.txt'
+
+                    AUDIT_STATUS=$?
+
+                    if [ "$AUDIT_STATUS" -ne 0 ]; then
+                        echo "WARNING: Dependency vulnerabilities detected. Remediation required before production."
+                    fi
+
+                    echo "Python security scan stage completed."
+                    exit 0
                 '''
             }
         }
@@ -48,8 +66,8 @@ pipeline {
             steps {
                 sh '''
                     docker build --platform linux/amd64 --provenance=false \
-                      -t "$IMAGE_URI:$BUILD_NUMBER" \
-                      -t "$IMAGE_URI:latest" .
+                        -t "$IMAGE_URI:$BUILD_NUMBER" \
+                        -t "$IMAGE_URI:latest" .
                 '''
             }
         }
@@ -57,11 +75,13 @@ pipeline {
         stage('Trivy Image Scan') {
             steps {
                 sh '''
-                    trivy image --severity HIGH,CRITICAL --exit-code 0 \
-                      "$IMAGE_URI:$BUILD_NUMBER"
+                    echo "Scanning Docker image with Trivy..."
 
-                    trivy image --severity CRITICAL --exit-code 1 \
-                      "$IMAGE_URI:$BUILD_NUMBER"
+                    trivy image --severity HIGH,CRITICAL --exit-code 0 "$IMAGE_URI:$BUILD_NUMBER"
+
+                    echo "Blocking deployment if CRITICAL vulnerabilities exist..."
+
+                    trivy image --severity CRITICAL --exit-code 1 "$IMAGE_URI:$BUILD_NUMBER"
                 '''
             }
         }
@@ -69,9 +89,8 @@ pipeline {
         stage('Push to Amazon ECR') {
             steps {
                 sh '''
-                    aws ecr get-login-password --region "$AWS_REGION" | \
-                      docker login --username AWS --password-stdin \
-                      "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+                    aws ecr get-login-password --region "$AWS_REGION" |
+                    docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
                     docker push "$IMAGE_URI:$BUILD_NUMBER"
                     docker push "$IMAGE_URI:latest"
@@ -81,14 +100,16 @@ pipeline {
     }
 
     post {
-        success {
-            echo 'CI/CD build and ECR push completed successfully.'
+        always {
+            sh 'docker image prune -f'
         }
+
+        success {
+            echo 'Pipeline completed successfully. Docker image pushed to Amazon ECR.'
+        }
+
         failure {
             echo 'Pipeline failed. Check the stage logs.'
-        }
-        always {
-            sh 'docker image prune -f || true'
         }
     }
 }
