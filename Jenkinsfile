@@ -23,6 +23,16 @@ pipeline {
         }
 
         stage('Python Security Scan') {
+    steps {
+        sh '''
+            echo "Running Bandit security scan..."
+            docker run --rm -v "$WORKSPACE:/app" -w /app python:3.12-slim sh -c "pip install --no-cache-dir bandit pip-audit && bandit -r app.py src -ll"
+
+            echo "Running pip-audit dependency scan..."
+            docker run --rm -v "$WORKSPACE:/app" -w /app python:3.12-slim sh -c "pip install --no-cache-dir pip-audit && pip-audit -r requirements-docker.txt" || echo "WARNING: Vulnerabilities detected in dependencies. Review before production."
+        '''
+    }
+} {
             steps {
                 sh '''
                     docker run --rm \
