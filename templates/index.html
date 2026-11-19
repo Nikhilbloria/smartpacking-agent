@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Packing Agent</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="glass-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="container">
+        <!-- App Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-robot logo-icon"></i>
+                <h1>Smart Packing Agent</h1>
+            </div>
+            <p class="subtitle">An intelligent agentic workflow that plans, checks weather, and packs for your journey.
+            </p>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="app-grid">
+
+            <!-- Left Panel: Form Input Settings -->
+            <section class="panel settings-panel">
+                <div class="panel-header">
+                    <i class="fa-solid fa-sliders header-icon"></i>
+                    <h2>Trip Context</h2>
+                </div>
+
+                <form id="packing-form" class="packing-form">
+                    <!-- Destination Input -->
+                    <div class="input-group">
+                        <label for="destination">
+                            <i class="fa-solid fa-map-location-dot"></i> Destination
+                        </label>
+                        <input type="text" id="destination" name="destination"
+                            placeholder="e.g. Manali, Goa, Delhi, Paris..." required autocomplete="off">
+                        <span class="input-hint">Search database or auto-mock any global city.</span>
+                    </div>
+
+                    <!-- Trip Type Selection (Card Select) -->
+                    <div class="input-group">
+                        <label>
+                            <i class="fa-solid fa-compass"></i> Trip Type
+                        </label>
+                        <div class="trip-cards-grid">
+                            <div class="trip-card active" data-type="trekking">
+                                <i class="fa-solid fa-mountain-hiking card-icon"></i>
+                                <span>Trekking</span>
+                            </div>
+                            <div class="trip-card" data-type="beach">
+                                <i class="fa-solid fa-umbrella-beach card-icon"></i>
+                                <span>Beach</span>
+                            </div>
+                            <div class="trip-card" data-type="business">
+                                <i class="fa-solid fa-briefcase card-icon"></i>
+                                <span>Business</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Duration Slider -->
+                    <div class="input-group">
+                        <div class="slider-header">
+                            <label for="duration">
+                                <i class="fa-solid fa-calendar-days"></i> Duration
+                            </label>
+                            <span id="duration-val" class="duration-val">3 days</span>
+                        </div>
+                        <input type="range" id="duration" name="duration" min="1" max="15" value="3"
+                            class="range-slider">
+                        <div class="slider-labels">
+                            <span>1 Day</span>
+                            <span>7 Days</span>
+                            <span>15 Days</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submit-btn" class="submit-btn">
+                        <span class="btn-text">Initialize Packing Agent</span>
+                        <i class="fa-solid fa-rocket btn-icon"></i>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Panel: Agent Live Trace & Packing List -->
+            <section class="panel results-panel">
+                <!-- Tab Controls -->
+                <div class="tab-controls">
+                    <button class="tab-btn active" data-tab="console">
+                        <i class="fa-solid fa-terminal"></i> Agent Console
+                    </button>
+                    <button class="tab-btn" data-tab="packing-list">
+                        <i class="fa-solid fa-list-check"></i> Packing List
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tab-contents">
+                    <!-- Console Log Trace Tab -->
+                    <div class="tab-content active" id="tab-console">
+                        <div class="console-box">
+                            <div class="console-header">
+                                <div class="console-actions">
+                                    <span class="dot dot-red"></span>
+                                    <span class="dot dot-yellow"></span>
+                                    <span class="dot dot-green"></span>
+                                </div>
+                                <span class="console-title">agent_trace.log</span>
+                            </div>
+                            <div class="console-body" id="console-output">
+                                <div class="console-placeholder">
+                                    <i class="fa-solid fa-terminal"></i>
+                                    <p>Ready to trace agentic reasoning loop. Submit trip parameters to start.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Packing Checklist Tab -->
+                    <div class="tab-content" id="tab-packing-list">
+                        <!-- Current Weather Card -->
+                        <div id="weather-card" class="weather-card" style="display: none;">
+                            <div class="weather-title">CURRENT WEATHER</div>
+
+                            <!-- Detailed Weather Info -->
+                            <div id="weather-details" class="weather-details">
+                                <div class="weather-location">
+                                    <i class="fa-solid fa-location-dot"></i> <span id="weather-city">N/A</span>
+                                </div>
+                                <div class="weather-grid">
+                                    <div class="weather-stat" id="weather-temp">🌡️ N/A</div>
+                                    <div class="weather-stat" id="weather-condition">☁️ N/A</div>
+                                    <div class="weather-stat" id="weather-humidity">💧 N/A</div>
+                                    <div class="weather-stat" id="weather-wind">💨 N/A</div>
+                                </div>
+                            </div>
+
+                            <!-- Weather Error -->
+                            <div id="weather-error" class="weather-error-container" style="display: none;">
+                                <i class="fa-solid fa-circle-exclamation"></i> Weather information unavailable
+                            </div>
+                        </div>
+
+                        <div class="checklist-container">
+                            <div class="checklist-header" id="checklist-summary">
+                                <h3>Your Packing Checklist</h3>
+                                <p>Execute the agent first to generate recommendation.</p>
+                            </div>
+                            <ul class="checklist-items" id="packing-checklist">
+                                <!-- checklist items loaded dynamically -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Custom Script JS -->
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
