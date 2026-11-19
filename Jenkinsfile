@@ -62,16 +62,15 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
-            steps {
-                sh '''
-                    docker build --platform linux/amd64 --provenance=false \
-                        -t "$IMAGE_URI:$BUILD_NUMBER" \
-                        -t "$IMAGE_URI:latest" .
-                '''
-            }
-        }
-
+       stage('Docker Build') {
+    steps {
+        sh '''
+            docker build --platform linux/amd64 \
+                -t "$IMAGE_URI:$BUILD_NUMBER" \
+                -t "$IMAGE_URI:latest" .
+        '''
+    }
+}
         stage('Trivy Image Scan') {
             steps {
                 sh '''
